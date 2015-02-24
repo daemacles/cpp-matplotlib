@@ -1,17 +1,34 @@
 # About
 
-This is a template directory structure for C++ projects.  It has support for
-YouCompleteMe in Vim.
+An easy-to-use library for simple plotting from C++ via a ZeroMQ bridge to
+Python's Matplotlib.
 
-# Usage
+# Prereqs
 
-  0) Modify contents of this file and LICENSE 
-  1) Add source files and edit CMakeLists.txt as necessary
-  2) Use
+## Ubuntu
 
-    $ mkdir build
-    $ cd build
-    $ cmake -DCMAKE_RELEASE_TYPE=[Debug|Release|RelWithDebInfo] ..
-    $ make
+    sudo apt-get install libzmq3-dev python-zmq python-matplotlib
 
+Some sort of pyqt 
+
+    sudo apt-get install python-pyside.qtcore python-pyside.qtgui
+
+# Build
+
+    git clone https://bitbucket.org/james_youngquist/cpp-matplotlib.git
+    cd cpp-matplotlib
+    mkdir build
+    cd build
+    cmake ..
+    make
+
+# Run (alpha demo)
+    
+In terminal 1:
+
+    python cpp-matplotlib/pyplot_listener.py
+
+In terminal 2:
+
+    cpp-matplotlib/build/cpp-matplotlib
 
