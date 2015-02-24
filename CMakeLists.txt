@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 
-set (PROJECT_NAME MyProject)
+set (PROJECT_NAME cpp-matplotlib)
 
 SET (CMAKE_C_COMPILER             "/usr/bin/clang-3.5")
-SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++-3.5")
+SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-3.5")
 
 project (${PROJECT_NAME})
 
@@ -34,7 +34,8 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 #endif (USE_MYMATH)
 
 ## Libraries to link with
-#target_link_libraries (${PROJECT_NAME} LibraryName)
+target_link_libraries (${PROJECT_NAME} zmq)
+
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
 SET (CMAKE_C_FLAGS_DEBUG          "${CMAKE_CFLAGS} -g")
