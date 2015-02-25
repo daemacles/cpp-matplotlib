@@ -7,6 +7,8 @@ SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-3.5")
 
 project (${PROJECT_NAME})
 
+include_directories ("${PROJECT_SOURCE_DIR}")
+
 add_executable (${PROJECT_NAME} main.cc)
 
 ## Support for Clang's CompilationDatabase system
@@ -19,12 +21,13 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 ## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
 ## is on.
-#add_library (LibraryName sources.cc)
+add_library (cpp_plot cpp_plot.cc)
+set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
 
 #if (USE_MY_LIBRARY)
 
 ## Search for include files here as well
-#include_directories ("{PROJECT_SOURCE_DIR}/some_sub_path")
+#include_directories ("${PROJECT_SOURCE_DIR}/some_sub_path")
 
 ## Run Cmake also in this dir
 #add_subdirectory (some_sub_path)
@@ -34,7 +37,7 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 #endif (USE_MYMATH)
 
 ## Libraries to link with
-target_link_libraries (${PROJECT_NAME} zmq)
+target_link_libraries (${PROJECT_NAME} zmq ${EXTRA_LIBS})
 
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
