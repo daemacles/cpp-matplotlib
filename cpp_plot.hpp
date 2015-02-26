@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-const size_t NAME_LEN = 16;
-
 std::string GetName(void);
 
 class NdArray {
@@ -50,5 +48,6 @@ private:
   uint32_t cols_;
 };
 
-void plot(const NdArray &data);
 
+bool SendCode(const std::string &code);
+bool SendData(const NdArray &data);

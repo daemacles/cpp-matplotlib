@@ -21,7 +21,7 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 ## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
 ## is on.
-add_library (cpp_plot cpp_plot.cc)
+add_library (cpp_plot cpp_plot.cc ReqRepConnection.cc)
 set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
 
 #if (USE_MY_LIBRARY)

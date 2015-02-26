@@ -19,7 +19,8 @@ int main(int argc, char **argv) {
   }
 
   NdArray data(raw_data);
-  plot(data);
+  SendData(data);
+  SendCode("a=1+3");
 
   return 0;
 }

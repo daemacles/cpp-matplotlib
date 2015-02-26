@@ -7,16 +7,20 @@
 #include <zmq.hpp>
 
 #include "cpp_plot.hpp"
+#include "ReqRepConnection.hpp"
+
+const uint32_t NAME_LEN = 16;
 
 std::string GetName(void) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> letters_distribution('A', 'Z');
   std::string salt{"cppmpl_"};
-  std::string random_name('a', NAME_LEN - salt.length());
+  std::string random_name(NAME_LEN - salt.size(), 'a');
   for (size_t i = 0; i != NAME_LEN - salt.size(); ++i) {
     random_name[i] = letters_distribution(generator);
   }
-  return salt + random_name;
+  std::string name = salt + random_name;
+  return name;
 }
 
 void NdArray::SetData (const dtype *data, size_t rows, size_t cols) {
@@ -29,7 +33,7 @@ void NdArray::SetData (const dtype *data, size_t rows, size_t cols) {
 
 uint32_t NdArray::WireSize (void) const {
   return sizeof(rows_) + sizeof(cols_) + 1 + sizeof(dtype)*rows_*cols_
-    + NAME_LEN;
+    + name_.size();
 }
 
 void NdArray::SerializeTo (std::vector<uint8_t> *buffer) const {
@@ -52,7 +56,7 @@ void NdArray::SerializeTo (std::vector<uint8_t> *buffer) const {
   std::memcpy(alias, data_.get(), sizeof(dtype)*rows_*cols_);
   alias += sizeof(dtype)*rows_*cols_;
 
-  std::memcpy(alias, name_.c_str(), NAME_LEN);
+  std::memcpy(alias, name_.c_str(), name_.size());
 }
 
 const NdArray::dtype* NdArray::DataRef (void) const {
@@ -71,22 +75,25 @@ std::string NdArray::Name (void) const {
   return name_;
 }
 
-void plot(const NdArray &data) {
-  zmq::context_t context(1);
-  zmq::socket_t socket(context, ZMQ_REQ);
-
-  std::cout << "Connecting to HW server..." << std::endl;
-  socket.connect("tcp://localhost:5555");
+bool SendData(const NdArray &data) {
+  ReqRepConnection data_conn("tcp://localhost:5555");
+  data_conn.Connect();
 
   std::vector<uint8_t> buffer(data.WireSize());
   data.SerializeTo(&buffer);
-  zmq::message_t request(&buffer[0], buffer.size(), nullptr);
 
-  std::cout << "Sending " << data.Name() << "...";
-  socket.send(request);
+  std::cout << "data sending " << data.Name() << "..." << std::endl;
+  data_conn.Send(buffer);
 
-  // Get the reply
-  zmq::message_t reply;
-  socket.recv(&reply);
-  std::cout << "Received " << std::string((char*)reply.data()) << std::endl;
+  return true;
+}
+
+bool SendCode(const std::string &code) {
+  ReqRepConnection code_conn("tcp://localhost:5556");
+  code_conn.Connect();
+
+  std::cout << "code sending ..." << std::endl;
+  code_conn.Send(code);
+
+  return true;
 }
