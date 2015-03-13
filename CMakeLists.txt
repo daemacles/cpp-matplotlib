@@ -7,9 +7,9 @@ SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-3.5")
 
 project (${PROJECT_NAME})
 
-include_directories ("${PROJECT_SOURCE_DIR}")
+include_directories ("${PROJECT_SOURCE_DIR}/src")
 
-add_executable (${PROJECT_NAME} main.cc)
+add_executable (${PROJECT_NAME} src/main.cc)
 
 ## Support for Clang's CompilationDatabase system
 set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
@@ -21,8 +21,9 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 ## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
 ## is on.
-add_library (cpp_plot cpp_plot.cc ReqRepConnection.cc)
-set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
+add_library (cpp_plot src/cpp_plot.cc src/ReqRepConnection.cc)
+add_library (ipython_protocol src/ipython_protocol.cc)
+set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot ipython_protocol)
 
 #if (USE_MY_LIBRARY)
 
@@ -37,8 +38,9 @@ set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
 #endif (USE_MYMATH)
 
 ## Libraries to link with
-target_link_libraries (${PROJECT_NAME} zmq ${EXTRA_LIBS})
-
+target_link_libraries (${PROJECT_NAME} 
+  zmq jsoncpp uuid ssl crypto 
+  ${EXTRA_LIBS})
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
 SET (CMAKE_C_FLAGS_DEBUG          "${CMAKE_CFLAGS} -g")

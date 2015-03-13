@@ -23,7 +23,7 @@ std::string GetName(void) {
   return name;
 }
 
-void NdArray::SetData (const dtype *data, size_t rows, size_t cols) {
+void NumpyArray::SetData (const dtype *data, size_t rows, size_t cols) {
   dtype *tmp = new dtype[rows*cols];
   std::memcpy(tmp, data, sizeof(dtype)*rows*cols);
   data_ = std::unique_ptr<dtype[]>(tmp);
@@ -31,12 +31,12 @@ void NdArray::SetData (const dtype *data, size_t rows, size_t cols) {
   cols_ = cols;
 }
 
-uint32_t NdArray::WireSize (void) const {
+uint32_t NumpyArray::WireSize (void) const {
   return sizeof(rows_) + sizeof(cols_) + 1 + sizeof(dtype)*rows_*cols_
     + name_.size();
 }
 
-void NdArray::SerializeTo (std::vector<uint8_t> *buffer) const {
+void NumpyArray::SerializeTo (std::vector<uint8_t> *buffer) const {
   if (buffer->size() < WireSize()) {
     throw std::runtime_error{"supplied buffer is not large enough"};
   }
@@ -59,23 +59,23 @@ void NdArray::SerializeTo (std::vector<uint8_t> *buffer) const {
   std::memcpy(alias, name_.c_str(), name_.size());
 }
 
-const NdArray::dtype* NdArray::DataRef (void) const {
+const NumpyArray::dtype* NumpyArray::DataRef (void) const {
   return data_.get();
 }
 
-uint32_t NdArray::Cols (void) const {
+uint32_t NumpyArray::Cols (void) const {
   return cols_;
 }
 
-uint32_t NdArray::Rows (void) const {
+uint32_t NumpyArray::Rows (void) const {
   return rows_;
 }
 
-std::string NdArray::Name (void) const {
+std::string NumpyArray::Name (void) const {
   return name_;
 }
 
-bool SendData(const NdArray &data) {
+bool SendData(const NumpyArray &data) {
   ReqRepConnection data_conn("tcp://localhost:5555");
   data_conn.Connect();
 
