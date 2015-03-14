@@ -7,13 +7,13 @@
 #include <vector>
 
 #include "ipython_protocol.hpp"
+#include "ReqRepConnection.hpp"
 
 class NumpyArray; // Forward definition
 
 std::string GetName(void);
 std::string LoadFile(std::string filename);
-bool SendCode(const std::string &code);
-bool SendData(const NumpyArray &data);
+
 
 class NumpyArray {
 public:
@@ -65,34 +65,30 @@ private:
 
 class CppMatplotlib {
 public:
+  CppMatplotlib (const std::string &config_filename)
+    : config_{config_filename},
+    data_conn_{"tcp://localhost:5555"},
+    session_{config_}
+  {}
 
-  void doit() {
-    std::string jsonConfigFile("CHANGEME");
-    IPyKernelConfig config(jsonConfigFile);
+  void Connect () {
+    session_.Connect();
+    data_conn_.Connect();
 
-    IPythonSession session(config);
-    session.Connect();
+    auto &shell = session_.Shell();
 
-    session.Shell().RunCode(LoadFile("../src/pyplot_listener.py"));
-    session.Shell().RunCode(R"(
-      try:
-      lt.running
-      except:
-      lt = ipython_run(globals())
-      )");
-
-    std::vector<NumpyArray::dtype> raw_data;
-
-    double x = 0.0;
-    while (x < 3.14159 * 4) {
-      raw_data.push_back(std::sin(x));
-      x += 0.05;
+    if (!shell.HasVariable("data_listener_thread")) {
+      shell.RunCode(LoadFile("../src/pyplot_listener.py"));
+      shell.RunCode("data_listener_thread = ipython_run(globals())");
     }
-
-    NumpyArray data("A", raw_data);
-    SendData(data);
-
-    session.Shell().RunCode("plot(A)");
   }
+
+  void Connect (void) const;
+  bool RunCode (const std::string &code);
+  bool SendData (const NumpyArray &data);
+
 private:
+  IPyKernelConfig config_;
+  ReqRepConnection data_conn_;
+  IPythonSession session_;
 };

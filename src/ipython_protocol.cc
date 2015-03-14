@@ -5,7 +5,7 @@
 
 #include "ipython_protocol.hpp"
 
-std::string GetUuid(void) {
+std::string GetUuid (void) {
   uuid_t uuid;
   char uuid_str[37] = {'\0'};
   uuid_generate_random(uuid);
@@ -14,7 +14,7 @@ std::string GetUuid(void) {
 }
 
 
-std::string BuildUri(const IPyKernelConfig &config, PortType port) {
+std::string BuildUri (const IPyKernelConfig &config, PortType port) {
   std::stringstream uri;
   uri << config.transport << "://" << config.ip << ":";
   switch (port) {
@@ -28,7 +28,7 @@ std::string BuildUri(const IPyKernelConfig &config, PortType port) {
 }
 
 
-IPyKernelConfig::IPyKernelConfig(const std::string &jsonConfigFile) {
+IPyKernelConfig::IPyKernelConfig (const std::string &jsonConfigFile) {
   // Parse the config file into JSON
   std::ifstream infile(jsonConfigFile);
   std::stringstream buffer;
@@ -36,7 +36,7 @@ IPyKernelConfig::IPyKernelConfig(const std::string &jsonConfigFile) {
   Json::Value config;
   buffer >> config;
 
-  // Assign JSON to ourselves
+  // Assign JSON values to ourselves
   shell_port = config["shell_port"].asUInt();
   iopub_port = config["iopub_port"].asUInt();
   stdin_port = config["stdin_port"].asUInt();
@@ -53,16 +53,30 @@ std::vector<Json::Value> IPythonMessage::GetMessageParts (void) const {
 }
 
 
+IPythonMessage MessageBuilder::BuildExecuteRequest (
+    const std::string &code) const {
+  IPythonMessage message{ident_};
 
-void ShellConnection::Connect(void) {
+  message.header_["msg_type"] = "execute_request";
+  message.content_["code"] = code;
+  message.content_["silent"] = false;
+  message.content_["store_history"] = true;
+  message.content_["user_variables"] = Json::Value(Json::arrayValue);
+  message.content_["user_expressions"] = Json::Value(Json::objectValue);
+  message.content_["allow_stdin"] = false;
+
+  return message;
+}
+
+void ShellConnection::Connect (void) {
   socket_.setsockopt(ZMQ_DEALER, ident_.data(), ident_.size());
   socket_.connect(uri_.c_str());
 }
 
-void ShellConnection::Send(const IPythonMessage &message) {
+IPythonMessage ShellConnection::Send (const IPythonMessage &message) {
   if (!socket_.connected()) {
     // TODO throw an exception?
-    return;
+    return IPythonMessage("None");
   }
 
   std::vector<Json::Value> message_parts = message.GetMessageParts();
@@ -78,41 +92,68 @@ void ShellConnection::Send(const IPythonMessage &message) {
                                          serialized.end()));
   }
 
-  std::cout << "Sending..." << std::endl;
+  // Send the message parts
   for (size_t i = 0; i != parts.size()-1; ++i) {
     socket_.send(parts[i].data(), parts[i].size(), ZMQ_SNDMORE);
   }
   socket_.send(parts.back().data(), parts.back().size());
 
-  std::cout << "Receiving..." << std::endl;
-  // TODO actually get and parse this response and return it.
-  while(true) {
-    zmq::message_t response;
+  // Receive the response
+  // 1) Strip out the leading stuff
+  zmq::message_t response;
+  while (true) {
     socket_.recv(&response);
-    std::fwrite(response.data(), 1, response.size(), stdout);
-    if (!response.more()) {
+    std::string serialized(reinterpret_cast<char*>(response.data()),
+                           response.size());
+    if (serialized == DELIM || !response.more()) {
       break;
     }
   }
+
+  // 2) Get the HMAC signature
+  // TODO verify contents via HMAC
+  std::string hmac_signature{"NONE"};
+  if (response.more()) {
+    socket_.recv(&response);
+    hmac_signature = std::string(reinterpret_cast<char*>(response.data()),
+                                 response.size());
+  }
+
+  // 3) Get the header, parent, metadata, and content
+  std::vector<Json::Value> response_message_parts;
+  while (response.more()) {
+    socket_.recv(&response);
+    std::string serialized(reinterpret_cast<char*>(response.data()),
+                           response.size());
+    std::stringstream json_stream(serialized);
+    Json::Value root;
+    json_stream >> root;
+    response_message_parts.push_back(root);
+  }
+
+  return IPythonMessage{response_message_parts};
 }
 
 void ShellConnection::RunCode (const std::string &code) {
-  ExecuteRequestMessage command(ident_, code);
+  IPythonMessage command = message_builder_.BuildExecuteRequest(code);
   Send(command);
 }
 
-void ShellConnection::GetVariable (const std::string &variable_name) {
-  ExecuteRequestMessage command(ident_, "None");
+bool ShellConnection::HasVariable (const std::string &variable_name) {
+  IPythonMessage command = message_builder_.BuildExecuteRequest("None");
   command.content_["user_variables"].append(variable_name);
-  Send(command);
+  IPythonMessage response = Send(command);
+  return response.content_["user_variables"][variable_name]["status"]
+    .asString() == "ok";
 }
 
 
-void IPythonSession::Connect(void) {
+void IPythonSession::Connect (void) {
   shell_connection_.Connect();
 }
 
-std::string IPythonSession::ComputeHMAC_(const std::vector<Json::Value> &parts) const {
+std::string IPythonSession::ComputeHMAC_ (
+    const std::vector<Json::Value> &parts) const {
   ENGINE_load_builtin_engines();
   ENGINE_register_all_complete();
 

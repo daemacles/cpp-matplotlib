@@ -22,8 +22,8 @@ struct IPyKernelConfig; // forward def
 
 typedef std::function<std::string(std::vector<Json::Value>)> HmacFn;
 enum class PortType {SHELL, IOPUB, STDIN, HB};
-const std::string DELIM{"<IDS|MSG>"};
 
+const std::string DELIM{"<IDS|MSG>"};
 
 std::string GetUuid(void);
 
@@ -51,7 +51,7 @@ public:
   Json::Value metadata_;
   Json::Value content_;
 
-  IPythonMessage(const std::string ident) 
+  explicit IPythonMessage(const std::string &ident) 
     : header_{Json::objectValue},
     parent_{Json::objectValue},
     metadata_{Json::objectValue},
@@ -64,27 +64,25 @@ public:
     header_["msg_id"] = GetUuid();
   }
 
+  explicit IPythonMessage(const std::vector<Json::Value> &message_parts)
+    : header_(message_parts[0]),
+    parent_(message_parts[1]),
+    metadata_(message_parts[2]),
+    content_(message_parts[3])
+  {}
+
   std::vector<Json::Value> GetMessageParts(void) const;
 };
 
 
-class ExecuteRequestMessage : public IPythonMessage {
+class MessageBuilder {
 public:
-  ExecuteRequestMessage (const std::string ident, const std::string &code)
-    : IPythonMessage{ident},
-    code_{code} 
-  {
-    header_["msg_type"] = "execute_request";
-    content_["code"] = code_;
-    content_["silent"] = false;
-    content_["store_history"] = true;
-    content_["user_variables"] = Json::Value(Json::arrayValue);
-    content_["user_expressions"] = Json::Value(Json::objectValue);
-    content_["allow_stdin"] = false;
-  }
+  MessageBuilder(const std::string &ident) : ident_(ident) {}
+
+  IPythonMessage BuildExecuteRequest (const std::string &code) const ;
 
 private:
-  const std::string code_;
+  const std::string ident_;
 };
 
 
@@ -94,18 +92,20 @@ public:
                   const HmacFn &hmac_fn)
     : hmac_fn_{hmac_fn},
     ident_{GetUuid()},
+    message_builder_{ident_},
     socket_(context, ZMQ_DEALER),
     uri_{BuildUri(config, PortType::SHELL)}
   {}
 
   void Connect(void);
-  void Send(const IPythonMessage &message);
+  IPythonMessage Send(const IPythonMessage &message);
   void RunCode (const std::string &code);
-  void GetVariable (const std::string &variable_name);
+  bool HasVariable (const std::string &variable_name);
 
 private:
   const HmacFn hmac_fn_;
   const std::string ident_;
+  const MessageBuilder message_builder_;
   zmq::socket_t socket_; 
   const std::string uri_;
 };

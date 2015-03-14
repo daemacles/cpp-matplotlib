@@ -8,7 +8,6 @@
 #include <zmq.hpp>
 
 #include "cpp_plot.hpp"
-#include "ReqRepConnection.hpp"
 
 const uint32_t NAME_LEN = 16;
 
@@ -17,31 +16,6 @@ std::string LoadFile(std::string filename) {
   std::stringstream buffer;
   buffer << infile.rdbuf();
   return buffer.str();
-}
-
-
-bool SendData(const NumpyArray &data) {
-  ReqRepConnection data_conn("tcp://localhost:5555");
-  data_conn.Connect();
-
-  std::vector<uint8_t> buffer(data.WireSize());
-  data.SerializeTo(&buffer);
-
-  std::cout << "data sending " << data.Name() << "..." << std::endl;
-  data_conn.Send(buffer);
-
-  return true;
-}
-
-
-bool SendCode(const std::string &code) {
-  ReqRepConnection code_conn("tcp://localhost:5556");
-  code_conn.Connect();
-
-  std::cout << "code sending ..." << std::endl;
-  code_conn.Send(code);
-
-  return true;
 }
 
 
@@ -109,3 +83,20 @@ std::string NumpyArray::Name (void) const {
   return name_;
 }
 
+
+bool CppMatplotlib::SendData(const NumpyArray &data) {
+  std::vector<uint8_t> buffer(data.WireSize());
+  data.SerializeTo(&buffer);
+
+  std::cout << "data sending " << data.Name() << "..." << std::endl;
+  data_conn_.Send(buffer);
+
+  return true;
+}
+
+
+bool CppMatplotlib::RunCode(const std::string &code) {
+  session_.Shell().RunCode(code);
+
+  return true;
+}

@@ -15,21 +15,8 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-  std::string jsonConfigFile(argv[1]);
-  IPyKernelConfig config(jsonConfigFile);
-
-  IPythonSession session(config);
-  session.Connect();
-
-  auto &shell = session.Shell();
-
-  shell.RunCode(LoadFile("../src/pyplot_listener.py"));
-  shell.RunCode(R"(
-try:
-  lt.running
-except:
-  lt = ipython_run(globals())
-)");
+  CppMatplotlib mpl{argv[1]};
+  mpl.Connect();
 
   std::vector<NumpyArray::dtype> raw_data;
 
@@ -40,9 +27,8 @@ except:
   }
 
   NumpyArray data("A", raw_data);
-  SendData(data);
-
-  shell.RunCode("plot(A)");
+  mpl.SendData(data);
+  mpl.RunCode("plot(A)");
 
   return 0;
 }
