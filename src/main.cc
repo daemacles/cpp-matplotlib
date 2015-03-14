@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "ipython_protocol.hpp"
 #include "cpp_plot.hpp"
 
 int main(int argc, char **argv) {

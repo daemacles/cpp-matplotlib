@@ -9,6 +9,9 @@
 
 #include "cpp_plot.hpp"
 
+#include "ipython_protocol.hpp"
+#include "ReqRepConnection.hpp"
+
 const uint32_t NAME_LEN = 16;
 
 std::string LoadFile(std::string filename) {
@@ -84,19 +87,41 @@ std::string NumpyArray::Name (void) const {
 }
 
 
+CppMatplotlib::CppMatplotlib (const std::string &config_filename)
+  : upConfig_{new IPyKernelConfig(config_filename)},
+  upData_conn_{new ReqRepConnection("tcp://localhost:5555")},
+  upSession_{new IPythonSession(*upConfig_)}
+{}
+
+CppMatplotlib::~CppMatplotlib (void) {
+  return;
+}
+
+void CppMatplotlib::Connect () {
+  upSession_->Connect();
+  upData_conn_->Connect();
+
+  auto &shell = upSession_->Shell();
+
+  if (!shell.HasVariable("data_listener_thread")) {
+    shell.RunCode(LoadFile("../src/pyplot_listener.py"));
+    shell.RunCode("data_listener_thread = ipython_run(globals())");
+  }
+}
+
 bool CppMatplotlib::SendData(const NumpyArray &data) {
   std::vector<uint8_t> buffer(data.WireSize());
   data.SerializeTo(&buffer);
 
   std::cout << "data sending " << data.Name() << "..." << std::endl;
-  data_conn_.Send(buffer);
+  upData_conn_->Send(buffer);
 
   return true;
 }
 
 
 bool CppMatplotlib::RunCode(const std::string &code) {
-  session_.Shell().RunCode(code);
+  upSession_->Shell().RunCode(code);
 
   return true;
 }

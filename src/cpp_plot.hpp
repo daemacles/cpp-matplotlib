@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "ipython_protocol.hpp"
-#include "ReqRepConnection.hpp"
-
-class NumpyArray; // Forward definition
+// Forward declarations
+struct IPyKernelConfig;
+class IPythonSession;
+class ReqRepConnection;
 
 std::string GetName(void);
 std::string LoadFile(std::string filename);
@@ -65,30 +65,19 @@ private:
 
 class CppMatplotlib {
 public:
-  CppMatplotlib (const std::string &config_filename)
-    : config_{config_filename},
-    data_conn_{"tcp://localhost:5555"},
-    session_{config_}
-  {}
+  CppMatplotlib (const std::string &config_filename);
 
-  void Connect () {
-    session_.Connect();
-    data_conn_.Connect();
+  // Must declare destructor here and define it in the .cc file so it is not
+  // implicitly inline, which allows the use of unique_pts with forward
+  // declarations.
+  ~CppMatplotlib (void); 
 
-    auto &shell = session_.Shell();
-
-    if (!shell.HasVariable("data_listener_thread")) {
-      shell.RunCode(LoadFile("../src/pyplot_listener.py"));
-      shell.RunCode("data_listener_thread = ipython_run(globals())");
-    }
-  }
-
-  void Connect (void) const;
+  void Connect (void);
   bool RunCode (const std::string &code);
   bool SendData (const NumpyArray &data);
 
 private:
-  IPyKernelConfig config_;
-  ReqRepConnection data_conn_;
-  IPythonSession session_;
+  std::unique_ptr<IPyKernelConfig> upConfig_;
+  std::unique_ptr<ReqRepConnection> upData_conn_;
+  std::unique_ptr<IPythonSession> upSession_;
 };
