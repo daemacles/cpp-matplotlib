@@ -11,6 +11,31 @@
 
 const uint32_t NAME_LEN = 16;
 
+bool SendData(const NumpyArray &data) {
+  ReqRepConnection data_conn("tcp://localhost:5555");
+  data_conn.Connect();
+
+  std::vector<uint8_t> buffer(data.WireSize());
+  data.SerializeTo(&buffer);
+
+  std::cout << "data sending " << data.Name() << "..." << std::endl;
+  data_conn.Send(buffer);
+
+  return true;
+}
+
+
+bool SendCode(const std::string &code) {
+  ReqRepConnection code_conn("tcp://localhost:5556");
+  code_conn.Connect();
+
+  std::cout << "code sending ..." << std::endl;
+  code_conn.Send(code);
+
+  return true;
+}
+
+
 std::string GetName(void) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> letters_distribution('A', 'Z');
@@ -75,25 +100,3 @@ std::string NumpyArray::Name (void) const {
   return name_;
 }
 
-bool SendData(const NumpyArray &data) {
-  ReqRepConnection data_conn("tcp://localhost:5555");
-  data_conn.Connect();
-
-  std::vector<uint8_t> buffer(data.WireSize());
-  data.SerializeTo(&buffer);
-
-  std::cout << "data sending " << data.Name() << "..." << std::endl;
-  data_conn.Send(buffer);
-
-  return true;
-}
-
-bool SendCode(const std::string &code) {
-  ReqRepConnection code_conn("tcp://localhost:5556");
-  code_conn.Connect();
-
-  std::cout << "code sending ..." << std::endl;
-  code_conn.Send(code);
-
-  return true;
-}

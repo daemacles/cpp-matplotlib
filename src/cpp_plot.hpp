@@ -6,13 +6,23 @@
 #include <string>
 #include <vector>
 
+class NumpyArray; // Forward definition
+
 std::string GetName(void);
+bool SendCode(const std::string &code);
+bool SendData(const NumpyArray &data);
 
 class NumpyArray {
 public:
   typedef double dtype;
 
-  NumpyArray (void) : name_{GetName()}, data_{nullptr}, rows_{0}, cols_{0} {}
+  explicit NumpyArray (const std::string &name) 
+    : name_{name}, data_{nullptr}, rows_{0}, cols_{0} 
+  {}
+
+  NumpyArray (void)
+    : name_{GetName()}, data_{nullptr}, rows_{0}, cols_{0} 
+  {}
 
   NumpyArray (const std::vector<dtype> &row_data) : 
     NumpyArray {row_data, row_data.size(), 1} {}
@@ -47,7 +57,3 @@ private:
   uint32_t rows_;
   uint32_t cols_;
 };
-
-
-bool SendCode(const std::string &code);
-bool SendData(const NumpyArray &data);

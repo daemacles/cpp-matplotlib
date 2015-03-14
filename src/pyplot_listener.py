@@ -169,6 +169,7 @@ def ipython_run(global_env):
   return lt
 
 
+'''
 if __name__ == "__main__":
   app = QtGui.QApplication(sys.argv)
 
@@ -179,3 +180,4 @@ if __name__ == "__main__":
   listenerThread.start()
 
   sys.exit(app.exec_())
+'''
