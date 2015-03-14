@@ -48,64 +48,10 @@ IPyKernelConfig::IPyKernelConfig(const std::string &jsonConfigFile) {
 }
 
 
-std::vector<Json::Value> IPythonMessage::GetMessage(const std::string ident)
-  const
-{
-  // Create the header
-  Json::Value header;
-
-  header["msg_id"] = GetUuid();
-
-  char username[80];
-  getlogin_r(username, 80);
-  header["username"] = std::string(username);
-
-  header["session"] = ident;
-
-  header["msg_type"] = "execute_request";
-
-  // Empty parent header
-  Json::Value parent{Json::objectValue};
-
-  // Empty metadata
-  Json::Value metadata(Json::objectValue);
-
-  // And the content
-  Json::Value content = GetContent();
-
-  std::vector<Json::Value> parts;
-  parts.push_back(std::move(header));
-  parts.push_back(std::move(parent));
-  parts.push_back(std::move(metadata));
-  parts.push_back(std::move(content));
-
-  return parts;
+std::vector<Json::Value> IPythonMessage::GetMessageParts (void) const {
+  return {header_, parent_, metadata_, content_};
 }
 
-Json::Value IPythonMessage::GetContent(void) const {
-  return GetContent_();
-}
-
-std::string IPythonMessage::GetType(void) const {
-  return GetType_();
-}
-
-
-Json::Value ExecuteCommandMessage::GetContent_(void) const {
-  // And finally, the content
-  Json::Value content;
-  content["code"] = code_;
-  content["silent"] = false;
-  content["store_history"] = true;
-  content["user_variables"] = Json::Value(Json::arrayValue);
-  content["user_expressions"] = Json::Value(Json::objectValue);
-  content["allow_stdin"] = false;
-  return content;
-}
-
-std::string ExecuteCommandMessage::GetType_(void) const {
-  return "execute_command";
-}
 
 
 void ShellConnection::Connect(void) {
@@ -119,7 +65,7 @@ void ShellConnection::Send(const IPythonMessage &message) {
     return;
   }
 
-  std::vector<Json::Value> message_parts = message.GetMessage(ident_);
+  std::vector<Json::Value> message_parts = message.GetMessageParts();
 
   std::vector<std::vector<uint8_t>> parts;
   parts.push_back(std::vector<uint8_t>(DELIM.begin(), DELIM.end()));
@@ -139,21 +85,28 @@ void ShellConnection::Send(const IPythonMessage &message) {
   socket_.send(parts.back().data(), parts.back().size());
 
   std::cout << "Receiving..." << std::endl;
+  // TODO actually get and parse this response and return it.
   while(true) {
     zmq::message_t response;
     socket_.recv(&response);
-    //std::fwrite(response.data(), 1, response.size(), stdout);
+    std::fwrite(response.data(), 1, response.size(), stdout);
     if (!response.more()) {
       break;
     }
   }
 }
 
-
-void IPythonSession::RunCode(std::string code) {
-  ExecuteCommandMessage command(code);
-  shell_connection_.Send(command);
+void ShellConnection::RunCode (const std::string &code) {
+  ExecuteRequestMessage command(ident_, code);
+  Send(command);
 }
+
+void ShellConnection::GetVariable (const std::string &variable_name) {
+  ExecuteRequestMessage command(ident_, "None");
+  command.content_["user_variables"].append(variable_name);
+  Send(command);
+}
+
 
 void IPythonSession::Connect(void) {
   shell_connection_.Connect();

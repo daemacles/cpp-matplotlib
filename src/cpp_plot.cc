@@ -1,5 +1,6 @@
 #include <cstring>
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <unistd.h>
@@ -10,6 +11,14 @@
 #include "ReqRepConnection.hpp"
 
 const uint32_t NAME_LEN = 16;
+
+std::string LoadFile(std::string filename) {
+  std::ifstream infile(filename);
+  std::stringstream buffer;
+  buffer << infile.rdbuf();
+  return buffer.str();
+}
+
 
 bool SendData(const NumpyArray &data) {
   ReqRepConnection data_conn("tcp://localhost:5555");

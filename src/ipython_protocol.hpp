@@ -46,26 +46,42 @@ struct IPyKernelConfig {
 
 class IPythonMessage {
 public:
-  IPythonMessage() {}
-  std::vector<Json::Value> GetMessage(const std::string ident) const;
-  Json::Value GetContent(void) const;
-  std::string GetType(void) const;
+  Json::Value header_;
+  Json::Value parent_;
+  Json::Value metadata_;
+  Json::Value content_;
 
-protected:
-  virtual Json::Value GetContent_(void) const = 0;
-  virtual std::string GetType_(void) const = 0;
+  IPythonMessage(const std::string ident) 
+    : header_{Json::objectValue},
+    parent_{Json::objectValue},
+    metadata_{Json::objectValue},
+    content_{Json::objectValue}
+  {
+    char username[80];
+    getlogin_r(username, 80);
+    header_["username"] = std::string(username);
+    header_["session"] = ident;
+    header_["msg_id"] = GetUuid();
+  }
+
+  std::vector<Json::Value> GetMessageParts(void) const;
 };
 
 
-class ExecuteCommandMessage : public IPythonMessage {
+class ExecuteRequestMessage : public IPythonMessage {
 public:
-  ExecuteCommandMessage (const std::string &code)
-    : code_{code} 
-  {}
-
-protected:
-  virtual Json::Value GetContent_(void) const;
-  virtual std::string GetType_(void) const;
+  ExecuteRequestMessage (const std::string ident, const std::string &code)
+    : IPythonMessage{ident},
+    code_{code} 
+  {
+    header_["msg_type"] = "execute_request";
+    content_["code"] = code_;
+    content_["silent"] = false;
+    content_["store_history"] = true;
+    content_["user_variables"] = Json::Value(Json::arrayValue);
+    content_["user_expressions"] = Json::Value(Json::objectValue);
+    content_["allow_stdin"] = false;
+  }
 
 private:
   const std::string code_;
@@ -84,6 +100,8 @@ public:
 
   void Connect(void);
   void Send(const IPythonMessage &message);
+  void RunCode (const std::string &code);
+  void GetVariable (const std::string &variable_name);
 
 private:
   const HmacFn hmac_fn_;
@@ -95,7 +113,7 @@ private:
 
 class IPythonSession {
 public:
-  IPythonSession(const IPyKernelConfig &config)
+  IPythonSession (const IPyKernelConfig &config)
     : config_{config},
     zmq_context_{1},
     hmac_fn_{std::bind(&IPythonSession::ComputeHMAC_, this, 
@@ -103,8 +121,8 @@ public:
     shell_connection_{config, zmq_context_, hmac_fn_}
   {}
 
-  void RunCode(std::string code);
-  void Connect(void);
+  void Connect (void);
+  ShellConnection& Shell (void) { return shell_connection_; }
 
 private:
   std::string ComputeHMAC_(const std::vector<Json::Value> &parts) const;
