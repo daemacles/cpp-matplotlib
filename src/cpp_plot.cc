@@ -112,16 +112,12 @@ void CppMatplotlib::Connect () {
 bool CppMatplotlib::SendData(const NumpyArray &data) {
   std::vector<uint8_t> buffer(data.WireSize());
   data.SerializeTo(&buffer);
-
-  std::cout << "data sending " << data.Name() << "..." << std::endl;
   upData_conn_->Send(buffer);
-
   return true;
 }
 
 
 bool CppMatplotlib::RunCode(const std::string &code) {
   upSession_->Shell().RunCode(code);
-
   return true;
 }

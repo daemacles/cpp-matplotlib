@@ -62,13 +62,17 @@ private:
   uint32_t cols_;
 };
 
-
+//! Interface between C++ and an IPython kernel with the pylab environment.
+/*!
+ * Presents a simple way to send code and Numpy compatible data to a
+ * seperately running IPython kernel.
+ */
 class CppMatplotlib {
 public:
-  CppMatplotlib (const std::string &config_filename);
+  explicit CppMatplotlib (const std::string &config_filename);
 
-  // Must declare destructor here and define it in the .cc file so it is not
-  // implicitly inline, which allows the use of unique_pts with forward
+  // Note: Must declare destructor here and define it in the .cc file so it is
+  // not implicitly inline, which allows the use of unique_ptrs with forward
   // declarations.
   ~CppMatplotlib (void); 
 
