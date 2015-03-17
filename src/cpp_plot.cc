@@ -14,6 +14,7 @@
 
 const uint32_t NAME_LEN = 16;
 
+// Reads an entire file into a string
 std::string LoadFile(std::string filename) {
   std::ifstream infile(filename);
   std::stringstream buffer;
@@ -21,7 +22,7 @@ std::string LoadFile(std::string filename) {
   return buffer.str();
 }
 
-
+// Randomly generates a name.
 std::string GetName(void) {
   std::default_random_engine generator;
   std::uniform_int_distribution<int> letters_distribution('A', 'Z');
@@ -34,6 +35,8 @@ std::string GetName(void) {
   return name;
 }
 
+
+//======================================================================
 void NumpyArray::SetData (const dtype *data, size_t rows, size_t cols) {
   dtype *tmp = new dtype[rows*cols];
   std::memcpy(tmp, data, sizeof(dtype)*rows*cols);
@@ -49,7 +52,7 @@ uint32_t NumpyArray::WireSize (void) const {
 
 void NumpyArray::SerializeTo (std::vector<uint8_t> *buffer) const {
   if (buffer->size() < WireSize()) {
-    throw std::runtime_error{"supplied buffer is not large enough"};
+    buffer->reserve(WireSize());
   }
 
   uint8_t *alias = &(*buffer)[0];
@@ -86,7 +89,7 @@ std::string NumpyArray::Name (void) const {
   return name_;
 }
 
-
+//======================================================================
 CppMatplotlib::CppMatplotlib (const std::string &config_filename)
   : upConfig_{new IPyKernelConfig(config_filename)},
   upData_conn_{new ReqRepConnection("tcp://localhost:5555")},
