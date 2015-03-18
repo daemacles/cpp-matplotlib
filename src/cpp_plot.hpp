@@ -20,7 +20,8 @@ std::string LoadFile(std::string filename);
  *
  * The NumpyArray is named at construction with the name of the python
  * variable into which its data will be placed.  The name is immutable, but
- * the data held by this array is not.
+ * the data held by this array is not.  The data must be of type
+ * NumpyArray::dtype.
  *
  * Usage:
 \code
@@ -38,6 +39,9 @@ std::string LoadFile(std::string filename);
  */
 class NumpyArray {
 public:
+  /** The type expected by numpy when reading the raw data buffer.  The data
+   * passed to NumpyArray must be of this type.
+   */
   typedef double dtype;
 
   //--------------------------------------------------

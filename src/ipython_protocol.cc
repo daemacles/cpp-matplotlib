@@ -5,6 +5,10 @@
 
 #include "ipython_protocol.hpp"
 
+/// Delimeter used by the iPython messaging protocol to separate ZMQ
+/// identities from message data.
+static const std::string DELIM{"<IDS|MSG>"};
+
 std::string GetUuid (void) {
   uuid_t uuid;
   char uuid_str[37] = {'\0'};
@@ -49,7 +53,7 @@ IPyKernelConfig::IPyKernelConfig (const std::string &jsonConfigFile) {
 
 
 std::vector<Json::Value> IPythonMessage::GetMessageParts (void) const {
-  return {header_, parent_, metadata_, content_};
+  return {header, parent, metadata, content};
 }
 
 
@@ -57,13 +61,13 @@ IPythonMessage MessageBuilder::BuildExecuteRequest (
     const std::string &code) const {
   IPythonMessage message{ident_};
 
-  message.header_["msg_type"] = "execute_request";
-  message.content_["code"] = code;
-  message.content_["silent"] = false;
-  message.content_["store_history"] = true;
-  message.content_["user_variables"] = Json::Value(Json::arrayValue);
-  message.content_["user_expressions"] = Json::Value(Json::objectValue);
-  message.content_["allow_stdin"] = false;
+  message.header["msg_type"] = "execute_request";
+  message.content["code"] = code;
+  message.content["silent"] = false;
+  message.content["store_history"] = true;
+  message.content["user_variables"] = Json::Value(Json::arrayValue);
+  message.content["user_expressions"] = Json::Value(Json::objectValue);
+  message.content["allow_stdin"] = false;
 
   return message;
 }
@@ -141,9 +145,9 @@ void ShellConnection::RunCode (const std::string &code) {
 
 bool ShellConnection::HasVariable (const std::string &variable_name) {
   IPythonMessage command = message_builder_.BuildExecuteRequest("None");
-  command.content_["user_variables"].append(variable_name);
+  command.content["user_variables"].append(variable_name);
   IPythonMessage response = Send(command);
-  return response.content_["user_variables"][variable_name]["status"]
+  return response.content["user_variables"][variable_name]["status"]
     .asString() == "ok";
 }
 
