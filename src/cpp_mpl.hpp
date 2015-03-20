@@ -12,11 +12,12 @@
 #include <string>
 #include <vector>
 
+namespace cppmpl {
+
 // Forward declarations
 struct IPyKernelConfig;
 class IPythonSession;
 class RequestSink;
-
 
 // Reads an entire file into a string
 //--------------------------------------------------
@@ -238,3 +239,5 @@ private:
   std::unique_ptr<RequestSink> upData_conn_;
   std::unique_ptr<IPythonSession> upSession_;
 };
+
+} // namespace

@@ -11,6 +11,8 @@
 
 #include "ipython_protocol.hpp"
 
+namespace cppmpl {
+
 /// Delimeter used by the iPython messaging protocol to separate ZMQ
 /// identities from message data.
 static const std::string DELIM{"<IDS|MSG>"};
@@ -288,4 +290,4 @@ void IPythonSession::Connect (void) {
   shell_connection_.Connect();
 }
 
-
+} // namespace

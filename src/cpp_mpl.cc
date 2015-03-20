@@ -13,10 +13,12 @@
 
 #include <zmq.hpp>
 
-#include "cpp_plot.hpp"
+#include "cpp_mpl.hpp"
 
 #include "ipython_protocol.hpp"
 #include "RequestSink.hpp"
+
+namespace cppmpl {
 
 // Names of the python variables
 static const std::string THREAD_VAR_NAME{"cpp_ipython_listener_thread"};
@@ -118,3 +120,5 @@ bool CppMatplotlib::SendData(const NumpyArray &data) {
 void CppMatplotlib::RunCode(const std::string &code) {
   upSession_->Shell().RunCode(code);
 }
+
+} // namespace

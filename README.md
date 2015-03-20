@@ -4,13 +4,13 @@
 * [Usage](#usage)
 * [Prereqs](#prereqs)
 * [Building](#building)
-* [Example](#example)
+* [Running the Example](#running-the-example)
 
 
 # About
 
-An easy-to-use library for simple plotting from C++ via a ZeroMQ bridge to
-an [IPython](http://ipython.org/) kernel. 
+An easy-to-use **C++11** library for simple plotting from C++ via a ZeroMQ
+bridge to an [IPython](http://ipython.org/) kernel. 
 
 It provides the ability to send [NumPy](http://www.numpy.org/) array
 compatible data to an IPython kernel session as well as execute arbitrary
@@ -43,29 +43,39 @@ Here we create some 1D data and plot it.  The numpy.array "MyData" will be
 available for working with in the IPython session, even after the C++ program
 finishes.
 
+All library code lives in the <tt>cppmpl</tt> namespace.
+
 ```c++
-CppMatplotlib mpl{"/path/to/kernel-NNN.json"};
-mpl.Connect();
+#include "cpp_mpl.hpp"
 
-// Create a nice curve  
-std::vector<NumpyArray::dtype> raw_data;
-double x = 0.0;
-while (x < 3.14159 * 4) {
-  raw_data.push_back(std::sin(x));
-  x += 0.05;
+int main() {
+  // ...
+
+  cppmpl::CppMatplotlib mpl{"/path/to/kernel-NNN.json"};
+  mpl.Connect();
+
+  // Create a nice curve  
+  std::vector<cppmpl::NumpyArray::dtype> raw_data;
+  double x = 0.0;
+  while (x < 3.14159 * 4) {
+    raw_data.push_back(std::sin(x));
+    x += 0.05;
+  }
+
+  // Send it to IPython for plotting
+  cppmpl::NumpyArray data("MyData", raw_data);
+  mpl.SendData(data);
+  mpl.RunCode("plot(MyData)\n"
+              "title('f(x) = sin(x)')\n"
+              "xlabel('x')\n"
+              "ylabel('f(x)')\n");
+
+  // NOTE: if you want to store the python in an external file, use the 
+  // convenience function LoadFile("my_code.py"), as in, 
+  // mpl.RunCode(cppmpl::LoadFile("plotting_code.py"));
+
+  // ...
 }
-
-// Send it to IPython for plotting
-NumpyArray data("MyData", raw_data);
-mpl.SendData(data);
-mpl.RunCode("plot(MyData)\n"
-            "title('f(x) = sin(x)')\n"
-            "xlabel('x')\n"
-            "ylabel('f(x)')\n");
-
-// NOTE: if you want to store the python in an external file, use the 
-// convenience function LoadFile("my_code.py"), as in, 
-// mpl.RunCode(LoadFile("plotting_code.py"));
 ```
 
 And the result is ![Screenshot](screenshot.png?raw=true)
@@ -91,6 +101,17 @@ In [1]: MyData *= 4
 In [84]: print MyData[9]
 [ 1.73986214]
 ```
+
+## Compiling / Linking
+
+When linking against <tt>cpp_plot.{a,so}</tt>, you also need to link against
+libzmq, libjsoncpp, libuuid, and libcripto:
+
+```
+$ g++ my_prog.cc -std=c++11 /path/to/libcpp_plot.a -ljsoncpp -lzmq -luuid -lcrypto
+```
+
+Or just modify CMakeFiles.txt...
 
 
 # Prereqs

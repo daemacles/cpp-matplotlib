@@ -11,6 +11,8 @@
 
 #include <zmq.hpp>
 
+namespace cppmpl {
+
 //======================================================================
 /** \brief This class wraps a ZeroMQ request-response socket connection.
  *
@@ -63,3 +65,5 @@ private:
   const std::string url_;
   bool connected_;
 };
+
+}

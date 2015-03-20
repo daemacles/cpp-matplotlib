@@ -8,6 +8,8 @@
 
 #include "RequestSink.hpp"
 
+namespace cppmpl {
+
 RequestSink::RequestSink(const std::string &url) :
       context_{1},
       socket_{context_, ZMQ_REQ},
@@ -42,3 +44,4 @@ bool RequestSink::Connect(void) {
   return true;
 }
 
+}

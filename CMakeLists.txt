@@ -18,12 +18,12 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 ## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
 ## is on.
-add_library (cpp_plot 
-  src/cpp_plot.cc 
+add_library (cpp_mpl 
+  src/cpp_mpl.cc 
   src/RequestSink.cc
   src/ipython_protocol.cc)
 
-set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
+set (EXTRA_LIBS ${EXTRA_LIBS} cpp_mpl)
 
 ## Libraries to link with
 target_link_libraries (${EXAMPLE_BIN} 

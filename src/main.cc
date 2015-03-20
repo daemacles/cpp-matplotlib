@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "cpp_plot.hpp"
+#include "cpp_mpl.hpp"
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -20,10 +20,10 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-  CppMatplotlib mpl{argv[1]};
+  cppmpl::CppMatplotlib mpl{argv[1]};
   mpl.Connect();
 
-  std::vector<NumpyArray::dtype> raw_data;
+  std::vector<cppmpl::NumpyArray::dtype> raw_data;
 
   double x = 0.0;
   while (x < 3.14159 * 4) {
@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     x += 0.05;
   }
 
-  NumpyArray data("A", raw_data);
+  cppmpl::NumpyArray data("A", raw_data);
   mpl.SendData(data);
   mpl.RunCode("plot(A)\n"
               "title('f(x) = sin(x)')\n"

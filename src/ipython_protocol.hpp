@@ -24,6 +24,8 @@ extern "C" {
 #include <openssl/hmac.h>
 #include <zmq.hpp>
 
+namespace cppmpl {
+
 // forward declarations
 struct IPyKernelConfig;
 struct IPythonMessage;
@@ -358,3 +360,5 @@ private:
   zmq::context_t zmq_context_;
   ShellConnection shell_connection_;  
 };
+
+} // namespace
