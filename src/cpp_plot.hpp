@@ -1,3 +1,9 @@
+// 
+// Copyright (c) 2015 Jim Youngquist
+// under The MIT License (MIT)
+// full text in LICENSE file in root folder of this project.
+// 
+
 #pragma once
 
 #include <exception>
@@ -9,9 +15,18 @@
 // Forward declarations
 struct IPyKernelConfig;
 class IPythonSession;
-class ReqRepConnection;
+class RequestSink;
 
-std::string GetName(void);
+
+// Reads an entire file into a string
+//--------------------------------------------------
+/** \brief Reads an entire file into a string.  Make sure you have enough
+ * memory...
+ *
+ * \param filename  the name of the file.
+ *
+ * \returns contents of the file.
+ */
 std::string LoadFile(std::string filename);
 
 
@@ -207,7 +222,7 @@ public:
    * \param code the code as a single string.  If it spans multiple lines, it
    * must explicitly contain newline characters and appropriate whitespace.
    */
-  bool RunCode (const std::string &code);
+  void RunCode (const std::string &code);
 
   //----------------------------------------------------------------------
   /** \brief Sends a Numpy compatible array to the iPython kernel's global
@@ -220,6 +235,6 @@ public:
 
 private:
   std::unique_ptr<IPyKernelConfig> upConfig_;
-  std::unique_ptr<ReqRepConnection> upData_conn_;
+  std::unique_ptr<RequestSink> upData_conn_;
   std::unique_ptr<IPythonSession> upSession_;
 };

@@ -1,3 +1,9 @@
+//
+// Copyright (c) 2015 Jim Youngquist
+// under The MIT License (MIT)
+// full text in LICENSE file in root folder of this project.
+//
+
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -10,29 +16,17 @@
 #include "cpp_plot.hpp"
 
 #include "ipython_protocol.hpp"
-#include "ReqRepConnection.hpp"
+#include "RequestSink.hpp"
 
-const uint32_t NAME_LEN = 16;
+// Names of the python variables
+static const std::string THREAD_VAR_NAME{"cpp_ipython_listener_thread"};
+static const std::string PORT_VAR_NAME{"cpp_ipython_listener_thread_port"};
 
-// Reads an entire file into a string
 std::string LoadFile(std::string filename) {
   std::ifstream infile(filename);
   std::stringstream buffer;
   buffer << infile.rdbuf();
   return buffer.str();
-}
-
-// Randomly generates a name.
-std::string GetName(void) {
-  std::default_random_engine generator;
-  std::uniform_int_distribution<int> letters_distribution('A', 'Z');
-  std::string salt{"cppmpl_"};
-  std::string random_name(NAME_LEN - salt.size(), 'a');
-  for (size_t i = 0; i != NAME_LEN - salt.size(); ++i) {
-    random_name[i] = letters_distribution(generator);
-  }
-  std::string name = salt + random_name;
-  return name;
 }
 
 
@@ -92,7 +86,7 @@ std::string NumpyArray::Name (void) const {
 //======================================================================
 CppMatplotlib::CppMatplotlib (const std::string &config_filename)
   : upConfig_{new IPyKernelConfig(config_filename)},
-  upData_conn_{new ReqRepConnection("tcp://localhost:5555")},
+  upData_conn_{nullptr}, // don't know what port listener thread will be on
   upSession_{new IPythonSession(*upConfig_)}
 {}
 
@@ -102,25 +96,25 @@ CppMatplotlib::~CppMatplotlib (void) {
 
 void CppMatplotlib::Connect () {
   upSession_->Connect();
-  upData_conn_->Connect();
 
   auto &shell = upSession_->Shell();
 
-  if (!shell.HasVariable("data_listener_thread")) {
+  if (!shell.HasVariable(THREAD_VAR_NAME)) {
     shell.RunCode(LoadFile("../src/pyplot_listener.py"));
-    shell.RunCode("data_listener_thread = ipython_run(globals())");
+    shell.RunCode("cpp_ipython_start_thread(globals())");
   }
+  std::string port_str = shell.GetVariable(PORT_VAR_NAME);
+
+  upData_conn_.reset(new RequestSink("tcp://localhost:" + port_str)),
+  upData_conn_->Connect();
 }
 
 bool CppMatplotlib::SendData(const NumpyArray &data) {
   std::vector<uint8_t> buffer(data.WireSize());
   data.SerializeTo(&buffer);
-  upData_conn_->Send(buffer);
-  return true;
+  return upData_conn_->Send(buffer);
 }
 
-
-bool CppMatplotlib::RunCode(const std::string &code) {
+void CppMatplotlib::RunCode(const std::string &code) {
   upSession_->Shell().RunCode(code);
-  return true;
 }

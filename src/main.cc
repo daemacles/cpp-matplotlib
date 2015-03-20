@@ -1,3 +1,9 @@
+//
+// Copyright (c) 2015 Jim Youngquist
+// under The MIT License (MIT)
+// full text in LICENSE file in root folder of this project.
+//
+
 #include <cmath>
 
 #include <fstream>
@@ -27,7 +33,10 @@ int main(int argc, char **argv) {
 
   NumpyArray data("A", raw_data);
   mpl.SendData(data);
-  mpl.RunCode("plot(A)");
+  mpl.RunCode("plot(A)\n"
+              "title('f(x) = sin(x)')\n"
+              "xlabel('x')\n"
+              "ylabel('f(x)')\n");
 
   return 0;
 }

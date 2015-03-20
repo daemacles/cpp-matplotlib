@@ -1,3 +1,9 @@
+// 
+// Copyright (c) 2015 Jim Youngquist
+// under The MIT License (MIT)
+// full text in LICENSE file in root folder of this project.
+// 
+
 #pragma once
 
 #include <cstdio>
@@ -18,10 +24,12 @@ extern "C" {
 #include <openssl/hmac.h>
 #include <zmq.hpp>
 
-struct IPyKernelConfig; // forward def
+// forward declarations
+struct IPyKernelConfig;
+struct IPythonMessage;
 
-/// Function object that computes an HMAC hash from a vector of JSON values.
-typedef std::function<std::string(std::vector<Json::Value>)> HmacFn;
+/// Function object that computes an HMAC hash from an IPythonMessage.
+typedef std::function<std::string(const IPythonMessage &message)> HmacFn;
 
 /// The different kinds of socket ports that an iPython kernel listens on.
 enum class PortType {SHELL, IOPUB, STDIN, HB};
@@ -87,35 +95,23 @@ struct IPyKernelConfig {
  * for more detail.
  */
 struct IPythonMessage {
+  /// Convenience typedef
+  typedef std::array<Json::Value, 4> MessageParts;
+
+  /// Underlying storage for the different parts
+  MessageParts message_parts_;
+
   /// The header = {'msg_id', 'username', 'session', 'msg_type'}
-  Json::Value header;
+  Json::Value &header;
 
   /// The header of this message's parent.  To associate response with request
-  Json::Value parent;
+  Json::Value &parent;
 
   /// Metadata for this message.  Seems to be unused?
-  Json::Value metadata;
+  Json::Value &metadata;
 
   /// Content payload for this message.  msg_type dependant.
-  Json::Value content;
-
-  //--------------------------------------------------
-  /** \brief Constructs an empty message for a specific session.
-   *
-   * \param ident  identity of the session this message belongs to.
-   */
-  explicit IPythonMessage(const std::string &ident) 
-    : header{Json::objectValue},
-    parent{Json::objectValue},
-    metadata{Json::objectValue},
-    content{Json::objectValue}
-  {
-    char username[80];
-    getlogin_r(username, 80);
-    header["username"] = std::string(username);
-    header["session"] = ident;
-    header["msg_id"] = GetUuid();
-  }
+  Json::Value &content;
 
   //--------------------------------------------------
   /** \brief Constructs a message with predefined fields.
@@ -124,14 +120,25 @@ struct IPythonMessage {
    *                       fields.  It assumes the elements will be in order
    *                       [header, parent_header, metadata, content].
    */
-  explicit IPythonMessage(const std::vector<Json::Value> &message_parts)
-    : header(message_parts[0]),
-    parent(message_parts[1]),
-    metadata(message_parts[2]),
-    content(message_parts[3])
-  {}
+  explicit IPythonMessage(const std::vector<Json::Value> &message_parts);
 
-  std::vector<Json::Value> GetMessageParts(void) const;
+  //--------------------------------------------------
+  /** \brief Constructs an empty message with the header appropriately filled
+   * in for the session associated with ident and the current user.
+   *
+   * \param ident  identity of the session this message belongs to.
+   */
+  explicit IPythonMessage(const std::string &ident);
+
+  // Iterator passthroughs so the IPythonMessage class can be iterated over.
+  MessageParts::const_iterator cbegin() const { 
+    return message_parts_.cbegin(); }
+  MessageParts::const_iterator cend() const { return message_parts_.cend(); }
+  MessageParts::const_iterator begin() const { return message_parts_.begin(); }
+  MessageParts::const_iterator end() const { return message_parts_.end(); }
+  MessageParts::iterator begin() { return message_parts_.begin(); }
+  MessageParts::iterator end() { return message_parts_.end(); }
+
 };
 
 
@@ -168,28 +175,138 @@ private:
 
 
 //======================================================================
+/** \brief HMAC computing function object for IPython message signing.
+ *
+ * Provides operator() for creating HMACs from IPython messages.
+ *
+ * Usage:
+\code
+    IPyKernelConfig config{"/path/to/kernel-NNN.json"};
+    MessageBuilder builder{"my_identity"};
+    IPythonMessage message = builder.BuildExecuteRequest("data = 15");
+    IPythonHmac hmac;
+    std::string message_signature = hmac(message.GetMessageParts());
+\endcode 
+ */
+class IPythonHmac {
+public:
+  /// Functional that returns an appropriate const EVP_MD*
+  typedef std::function<const EVP_MD* (void)> EvpTypeFn;
+
+  //--------------------------------------------------
+  /** \brief Constructs a new HMAC functional based on an IPython
+   * configuration.
+   *
+   * \param config  the configuration which contains the secret key and hash
+   *                function type.
+   */
+  IPythonHmac (const IPyKernelConfig &config);
+
+  //--------------------------------------------------
+  /** \brief Returns the HMAC signature for a message
+   *
+   * \param message  the IPythonMessage whose signature it computes.
+   */
+  std::string operator() (const IPythonMessage &message) const;
+  
+private:
+  const EvpTypeFn GetEvpTypeFnFromConfig_(const IPyKernelConfig &config) const;
+
+  const std::string key_;
+  const EvpTypeFn evp_type_fn_;
+};
+
+
+//======================================================================
 /** \brief A connection to the shell socket of an iPython kernel.
  *
- * TODO fill this out!
+ * The shell socket is the primary way to transfer code for execution on the
+ * iPython kernel, as well as introspect by asking for object information and
+ * code completion, and control of the kernel itself.
+ *
+ * As of 2015.03.18 only the code execution message has been implemented.
+ *
+ * This class could be used alone, but is intended to provide lower lever
+ * functionality for the IPythonSession class.
+ *
+ * Usage:
+\code
+    // Set up parameters
+    IPyKernelConfig config("path/to/kernel-NNN.json")
+    zmq::context_t zmq_context(1);
+    HmacFn hmac_fn{IPythonHmac("secret key", EVP_sha256)};
+
+    // Create the connection.  The host info is in the config.
+    ShellConnection conn{config, zmq_context, hmac_fn};
+    conn.Connect();
+
+    if (!conn.HasVariable("my_var")) {
+      conn.RunCode("my_var = 50");
+    } else {
+      conn.RunCode("my_var -= 1");
+    }
+\endcode
  */
 class ShellConnection {
 public:
-  // 
-  ShellConnection(const IPyKernelConfig &config, zmq::context_t &context,
-                  const HmacFn &hmac_fn)
-    : hmac_fn_{hmac_fn},
-    ident_{GetUuid()},
-    message_builder_{ident_},
-    socket_(context, ZMQ_DEALER),
-    uri_{BuildUri(config, PortType::SHELL)}
+  //--------------------------------------------------
+  /** \brief Configure a new shell connection without actually connecting any
+   * sockets.
+   *
+   * \param config  a valid IPyKernelConfig configuration
+   * \param context  the ZeroMQ context to use for socket connections
+   */ 
+  ShellConnection (const IPyKernelConfig &config, zmq::context_t &context) :
+      hmac_fn_{IPythonHmac(config)},
+      ident_{GetUuid()},
+      message_builder_{ident_},
+      socket_(context, ZMQ_DEALER),
+      uri_{BuildUri(config, PortType::SHELL)}
   {}
 
-  void Connect(void);
-  IPythonMessage Send(const IPythonMessage &message);
+  //--------------------------------------------------
+  /** \brief Connect to the shell socket on a running IPython kernel.
+   */
+  void Connect (void);
+
+  //--------------------------------------------------
+  /** \brief Runs code in the associated IPython kernel.
+   *
+   * \throws std::runtime_error  if IPython has a problem running the code.
+   *                             Will also dump the response to stderr.
+   *
+   * \param code  the valid python code to run. Multiple lines must be
+   *              explicitly separated by newline characters.
+   */
   void RunCode (const std::string &code);
+
+  //--------------------------------------------------
+  /** \brief Returns whether a variable exists in the global namespace of the
+   * associated IPython kernel.
+   *
+   * \param variable_name  the variable to check for.
+   */
   bool HasVariable (const std::string &variable_name);
 
+  //--------------------------------------------------
+  /** \brief Returns a variable's value as a string in the global namespace of
+   * the associated IPython kernel.  It is up to the caller to know what type
+   * to convert the response to.
+   *
+   * \throws std::runtime_error  if the variable does not exists, e.g.
+   *                             KeyError.
+   *
+   * \param variable_name  the variable to check for.
+   *
+   * \returns variable's string representation from __str__
+   */
+  std::string GetVariable (const std::string &variable_name);
+
 private:
+  IPythonMessage GenericRun_ (const std::string &code,
+                              const std::vector<std::string> &variable_names);
+  IPythonMessage Send_ (const IPythonMessage &message);
+
   const HmacFn hmac_fn_;
   const std::string ident_;
   const MessageBuilder message_builder_;
@@ -198,24 +315,46 @@ private:
 };
 
 
+//======================================================================
+/** \brief High level wrapper for a client connection to a running IPython
+ * kernel.
+ *
+ * It is incomplete.  TODO: implement all the remaining socket connection
+ * types and messages.  But, it suffices for simply running code.
+ *
+ * Usage:
+\code
+    // Connect to the running IPython kernel with PID NNN.
+    IPyKernelConfig config("/path/to/kernel-NNN.json");
+    IPythonSession session(config);
+    session.Connect();
+
+    // Run some code
+    session.Shell().RunCode("print 'hello world!'");
+\endcode
+ */
 class IPythonSession {
 public:
-  explicit IPythonSession (const IPyKernelConfig &config)
-    : config_{config},
-    zmq_context_{1},
-    hmac_fn_{std::bind(&IPythonSession::ComputeHMAC_, this, 
-                       std::placeholders::_1)},
-    shell_connection_{config, zmq_context_, hmac_fn_}
-  {}
+  //--------------------------------------------------
+  /** \brief Constructs a session associated with a specific IPython kernel,
+   * but does not connect sockets.
+   *
+   * \param config  configuration for the IPython kernel.
+   */
+  explicit IPythonSession (const IPyKernelConfig &config);
 
+  //--------------------------------------------------
+  /** \brief Connect to the IPython kernel.
+   */
   void Connect (void);
+
+  //--------------------------------------------------
+  /** \brief Returns a reference to the shell socket connection.
+   */
   ShellConnection& Shell (void) { return shell_connection_; }
 
 private:
-  std::string ComputeHMAC_(const std::vector<Json::Value> &parts) const;
-
   const IPyKernelConfig config_;
   zmq::context_t zmq_context_;
-  HmacFn hmac_fn_;
   ShellConnection shell_connection_;  
 };

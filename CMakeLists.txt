@@ -2,45 +2,33 @@ cmake_minimum_required (VERSION 2.6)
 
 set (PROJECT_NAME cpp-matplotlib)
 
-SET (CMAKE_C_COMPILER             "/usr/bin/clang-3.5")
-SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-3.5")
+# If you want to use clang, uncomment these.
+#SET (CMAKE_C_COMPILER             "/usr/bin/clang-3.5")
+#SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-3.5")
 
 project (${PROJECT_NAME})
+set (EXAMPLE_BIN ${PROJECT_NAME}-example)
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
-add_executable (${PROJECT_NAME} src/main.cc)
+add_executable (${EXAMPLE_BIN} src/main.cc)
 
 ## Support for Clang's CompilationDatabase system
 set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-## Set optional features.  This will show up as a preprocessor variable
-## USE_MY_LIBRARY in source.
-#option (USE_MY_LIBRARY
-#        "Use the provided library" ON)
-
 ## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
 ## is on.
-add_library (cpp_plot src/cpp_plot.cc src/ReqRepConnection.cc)
-add_library (ipython_protocol src/ipython_protocol.cc)
-set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot ipython_protocol)
+add_library (cpp_plot 
+  src/cpp_plot.cc 
+  src/RequestSink.cc
+  src/ipython_protocol.cc)
 
-#if (USE_MY_LIBRARY)
-
-## Search for include files here as well
-#include_directories ("${PROJECT_SOURCE_DIR}/some_sub_path")
-
-## Run Cmake also in this dir
-#add_subdirectory (some_sub_path)
-
-#set (EXTRA_LIBS ${EXTRA_LIBS} LibraryName)
-
-#endif (USE_MYMATH)
+set (EXTRA_LIBS ${EXTRA_LIBS} cpp_plot)
 
 ## Libraries to link with
-target_link_libraries (${PROJECT_NAME} 
-  zmq jsoncpp uuid ssl crypto 
-  ${EXTRA_LIBS})
+target_link_libraries (${EXAMPLE_BIN} 
+  ${EXTRA_LIBS}
+  zmq jsoncpp uuid ssl crypto)
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
 SET (CMAKE_C_FLAGS_DEBUG          "${CMAKE_CFLAGS} -g")

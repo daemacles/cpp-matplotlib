@@ -1,3 +1,9 @@
+# 
+# Copyright (c) 2015 Jim Youngquist
+# under The MIT License (MIT)
+# full text in LICENSE file in root folder of this project.
+# 
+
 import os
 import time
 import signal
@@ -11,26 +17,30 @@ import zmq
 import threading 
 
 class ListenerThread(threading.Thread):
-  def __init__(self, code_uri, global_env):
+  def __init__(self, global_env):
     super(ListenerThread, self).__init__()
     self.running = True
     self.global_env = global_env
-    self.code_uri = code_uri
+    self.port = None
 
 
   def decodeData(self, message):
-    assert len(message) >= 9, "Message is not long enough"
+    if len(message) < 9:
+        return False, "Message is not long enough"
 
     rows, cols, size = struct.unpack('IIB', message[:9])
     length = rows*cols*size
-    assert len(message) >= 9+length, "Message contains insufficient data"
+    if len(message) < 9 + length:
+        return False, "Message contains insufficient data"
 
     dtype = {4 : np.float32,
          8 : np.float64}[size]
     data = np.fromstring(message[9:9+length], dtype=dtype)
     data = data.reshape(rows, cols)
 
-    assert len(message[9+length:]) > 0, "Message has zero length name field"
+    if len(message[9+length:]) == 0:
+        return False, "Message has zero length name field"
+
     name = message[9+length:]
 
     return data, name
@@ -52,27 +62,24 @@ class ListenerThread(threading.Thread):
     return self.sendString(socket, "Success")
 
 
-  def sendFailure(self, socket):
-    return self.sendString(socket, "Failure")
+  def sendFailure(self, socket, message):
+    return self.sendString(socket, message)
 
 
   def processData(self, data_message):
     data, name = self.decodeData(data_message)
+    if data is False:
+        return data, name
+
     self.global_env[name] = data
-    return True
-
-
-  def processCode(self, code_message):
-    print "I'm running:\n", code_message
-    exec(code_message, self.global_env)
-    return True
+    return True, name
 
 
   def run(self):
     context = zmq.Context()
 
     data_socket = context.socket(zmq.REP)
-    data_socket.bind("tcp://*:5555")
+    self.port = data_socket.bind_to_random_port("tcp://*")
 
     poller = zmq.Poller()
     poller.register(data_socket, flags = zmq.POLLIN)
@@ -86,19 +93,21 @@ class ListenerThread(threading.Thread):
         try:
           if event:
             message = socket.recv()
-            success = processors[socket](message)
+            success, message = processors[socket](message)
             if success:
               self.sendSuccess(socket)
             else:
-              self.sendFailure(socket)
+              self.sendFailure(socket, message)
         except zmq.error.ZMQError as e:
           # there was a transmit error...oops...die
           self.running = False
           continue
 
 
-def ipython_run(global_env):
-  cpp_ipython_listener_thread = ListenerThread(global_env)
-  cpp_ipython_listener_thread.start()
-  return lt
+def cpp_ipython_start_thread(global_env):
+  listener_thread = ListenerThread(global_env)
+  listener_thread.start()
+  global_env["cpp_ipython_listener_thread"] = listener_thread
+  global_env["cpp_ipython_listener_thread_port"] = listener_thread.port
+  return True
 
