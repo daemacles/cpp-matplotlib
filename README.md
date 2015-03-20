@@ -1,10 +1,10 @@
 # Contents
 
-[About](#about)
-[Usage] (#usage)
-[Prereqs](#prereqs)
-[Building](#building)
-[Example](#example)
+* [About](#about)
+* [Usage](#usage)
+* [Prereqs](#prereqs)
+* [Building](#building)
+* [Example](#example)
 
 
 # About
@@ -23,32 +23,74 @@ of 2015-03-19 it has been tested with IPython version 1.2.1 on Ubuntu 14.04.
 
 # Usage
 
-Here we create some 1D data and plot it.  The variable "A" will be available
-for working with in the IPython session, even after the C++ program finishes.
+First, create an IPython kernel session
 
-    CppMatplotlib mpl{"/path/to/kernel-NNN.json"};
-    mpl.Connect();
+```
+$ ipython kernel --pylab
+NOTE: When using the `ipython kernel` entry point, Ctrl-C will not work.
 
-    // Create a nice curve  
-    std::vector<NumpyArray::dtype> raw_data;
-    double x = 0.0;
-    while (x < 3.14159 * 4) {
-      raw_data.push_back(std::sin(x));
-      x += 0.05;
-    }
+... blah blah blah ...
 
-    // Send it to IPython for plotting
-    NumpyArray data("A", raw_data);
-    mpl.SendData(data);
-    mpl.RunCode("plot(A)\n"
-                "title('f(x) = sin(x)')\n"
-                "xlabel('x')\n"
-                "ylabel('f(x)')\n");
+To connect another client to this kernel, use:
+    --existing kernel-NNN.json
+```
 
-And the result will be ![Screenshot](screenshot.png?raw=true "Screenshot of
-sin(x)")
+It is important to remember that NNN in the last line, which is the PID of the
+kernel.  This JSON file is stored somewhere in your $HOME, exactly where can
+vary.  Find it with <tt>find ~/ -name kernel-NNN.json</tt>.
+
+Here we create some 1D data and plot it.  The numpy.array "MyData" will be
+available for working with in the IPython session, even after the C++ program
+finishes.
+
+```c++
+CppMatplotlib mpl{"/path/to/kernel-NNN.json"};
+mpl.Connect();
+
+// Create a nice curve  
+std::vector<NumpyArray::dtype> raw_data;
+double x = 0.0;
+while (x < 3.14159 * 4) {
+  raw_data.push_back(std::sin(x));
+  x += 0.05;
+}
+
+// Send it to IPython for plotting
+NumpyArray data("MyData", raw_data);
+mpl.SendData(data);
+mpl.RunCode("plot(MyData)\n"
+            "title('f(x) = sin(x)')\n"
+            "xlabel('x')\n"
+            "ylabel('f(x)')\n");
+
+// NOTE: if you want to store the python in an external file, use the 
+// convenience function LoadFile("my_code.py"), as in, 
+// mpl.RunCode(LoadFile("plotting_code.py"));
+```
+
+And the result is ![Screenshot](screenshot.png?raw=true)
 
 See [src/main.cc](src/main.cc) for a complete program.
+
+To work with "MyData" you can connect to the kernel using an IPython console,
+notebook, or qtconsole:
+
+```
+$ ipython console --existing kernel-NNN.json
+Python 2.7.6 (default, Mar 22 2014, 22:59:56) 
+Type "copyright", "credits" or "license" for more information.
+
+IPython 1.2.1 -- An enhanced Interactive Python.
+?         -> Introduction and overview of IPython's features.
+%quickref -> Quick reference.
+help      -> Python's own help system.
+object?   -> Details about 'object', use 'object??' for extra details.
+
+In [1]: MyData *= 4
+
+In [84]: print MyData[9]
+[ 1.73986214]
+```
 
 
 # Prereqs
@@ -61,7 +103,7 @@ See [src/main.cc](src/main.cc) for a complete program.
 
 # Building
 
-    git clone https://bitbucket.org/james_youngquist/cpp-matplotlib.git
+    # git clone this repository to cpp-matplotlib/
     cd cpp-matplotlib
     mkdir build
     cd build
@@ -74,7 +116,8 @@ See [src/main.cc](src/main.cc) for a complete program.
     doxygen Doxyfile
     # open html/index.html
 
-# Example
+
+# Running the Example
     
 In terminal 1:
 
