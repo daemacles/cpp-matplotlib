@@ -16,19 +16,42 @@ add_executable (${EXAMPLE_BIN} src/main.cc)
 ## Support for Clang's CompilationDatabase system
 set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-## Compile and create a library.  STATIC is default unless BUILD_SHARED_LIBS
-## is on.
-add_library (cpp_mpl 
+set (LIB_ERROR "FALSE")
+macro(require_library _NAME _name)
+  find_library (${_NAME} ${_name})
+  if (${_NAME} STREQUAL "${_NAME}-NOTFOUND")
+    set (LIB_ERROR 1)
+    message(SEND_ERROR "Please install lib${_name}")
+  else (${_NAME} STREQUAL "${_NAME}-NOTFOUND")
+    set (LIBRARIES ${LIBRARIES} ${_name})
+  endif (${_NAME} STREQUAL "${_NAME}-NOTFOUND")
+endmacro(require_library)
+
+require_library (ZMQ zmq)
+require_library (JSONCPP jsoncpp)
+require_library (UUID uuid)
+require_library (SSL ssl)
+require_library (CRYPTO crypto)
+
+if (${LIB_ERROR})
+  message(FATAL_ERROR "Please install prerequisite libraries.  See README.md for details")
+endif (${LIB_ERROR})
+
+add_library (cpp_mpl SHARED
   src/cpp_mpl.cc 
   src/RequestSink.cc
   src/ipython_protocol.cc)
+target_link_libraries (cpp_mpl ${LIBRARIES})
 
 set (EXTRA_LIBS ${EXTRA_LIBS} cpp_mpl)
 
-## Libraries to link with
+## Libraries for the example to link against
 target_link_libraries (${EXAMPLE_BIN} 
-  ${EXTRA_LIBS}
-  zmq jsoncpp uuid ssl crypto)
+  ${EXTRA_LIBS})
+
+## Installation
+install (TARGETS cpp_mpl LIBRARY DESTINATION lib)
+install (FILES src/cpp_mpl.hpp DESTINATION include)
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
 SET (CMAKE_C_FLAGS_DEBUG          "${CMAKE_CFLAGS} -g")

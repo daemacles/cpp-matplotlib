@@ -104,14 +104,12 @@ In [84]: print MyData[9]
 
 ## Compiling / Linking
 
-When linking against <tt>cpp_plot.{a,so}</tt>, you also need to link against
-libzmq, libjsoncpp, libuuid, and libcripto:
+When compiling you must link against <tt>libcpp_mpl.so</tt>, which, assuming
+you've installed it to somewhere in your library path:
 
 ```
-$ g++ my_prog.cc -std=c++11 /path/to/libcpp_plot.a -ljsoncpp -lzmq -luuid -lcrypto
+$ g++ my_prog.cc -std=c++11 -lcpp_mpl -lyour_other_libs
 ```
-
-Or just modify CMakeFiles.txt...
 
 
 # Prereqs
@@ -130,6 +128,13 @@ Or just modify CMakeFiles.txt...
     cd build
     cmake ..
     make
+
+## Installing
+
+    make install
+
+By default installs to /usr/local.  Don't forget to run <tt>sudo ldconfig</tt>
+to update the library cache.
 
 ## Generating the documentation
 
