@@ -90,7 +90,7 @@ public:
    * \param rows  the number of rows in data.
    * \param cols  the number of columns in data.
    */
-  NumpyArray (const std::string name, const std::vector<dtype> data, 
+  NumpyArray (const std::string name, const std::vector<dtype> &data, 
               size_t rows, size_t cols)
     : NumpyArray{name}
   {
