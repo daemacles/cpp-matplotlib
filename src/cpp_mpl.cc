@@ -95,6 +95,12 @@ CppMatplotlib::CppMatplotlib (const std::string &config_filename)
   upSession_{new IPythonSession(*upConfig_)}
 {}
 
+CppMatplotlib::CppMatplotlib (CppMatplotlib &&other)
+  : upConfig_{std::move(other.upConfig_)},
+  upData_conn_{std::move(other.upData_conn_)}, // don't know what port listener thread will be on
+  upSession_{std::move(other.upSession_)}
+{}
+
 CppMatplotlib::~CppMatplotlib (void) {
   return;
 }

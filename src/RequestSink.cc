@@ -4,7 +4,7 @@
 // full text in LICENSE file in root folder of this project.
 //
 
-#include <exception>
+#include <stdexcept>
 
 #include "RequestSink.hpp"
 

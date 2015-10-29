@@ -52,6 +52,9 @@ target_link_libraries (${EXAMPLE_BIN}
 ## Installation
 install (TARGETS cpp_mpl LIBRARY DESTINATION lib)
 install (FILES src/cpp_mpl.hpp DESTINATION include)
+export (PACKAGE cpp-matplotlib)
+configure_file (cpp-matplotlib-config.cmake cpp-matplotlib-config.cmake
+  COPYONLY)
 
 SET (CMAKE_C_FLAGS                "-Wall -std=c11 -Wextra -Werror")
 SET (CMAKE_C_FLAGS_DEBUG          "${CMAKE_CFLAGS} -g")

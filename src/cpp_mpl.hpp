@@ -201,6 +201,7 @@ public:
    * the iPython kernel as specified in the config_filename JSON file.
    */
   explicit CppMatplotlib (const std::string &config_filename);
+  CppMatplotlib (CppMatplotlib &&other);
 
   //----------------------------------------------------------------------
   // Note: Must declare destructor here and define it in the .cc file so it is
