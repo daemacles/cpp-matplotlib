@@ -183,7 +183,15 @@ bool ShellConnection::HasVariable (const std::string &variable_name) {
 
 std::string ShellConnection::GetVariable (const std::string &variable_name) {
   IPythonMessage response = GenericRun_("None", {variable_name});
-  Json::Value variable_dict = response.content["user_variables"][variable_name];
+  Json::Value variable_dict;
+  if (response.content.isMember("user_variables")) {
+    variable_dict = response.content["user_variables"][variable_name];
+  } else if (response.content.isMember("user_expressions")) {
+    variable_dict = response.content["user_expressions"][variable_name];
+  } else {
+    std::cout << response.content << std::endl;
+    throw std::runtime_error("Returned JSON not understood");
+  }
 
   // Check that the variable exists
   if (variable_dict["status"] == "error") {
@@ -193,8 +201,7 @@ std::string ShellConnection::GetVariable (const std::string &variable_name) {
     throw std::runtime_error("Error with looking up variable");
   }
 
-  return response.content["user_variables"][variable_name]["data"]
-    ["text/plain"].asString();
+  return variable_dict["data"]["text/plain"].asString();
 }
 
 // This is a helper for the specific methods that execute code or look for
